@@ -269,6 +269,10 @@ int main()
     double MaxParamDifference;
     cout << " Start Params " << endl;
     curParams.Print();
+    cout << " (X, Y) " << endl;
+    for (int i = 0; i < Test1.numberOfCases; i++) {
+        cout << " (" << Test1.x[i] << ", " << Test1.y[i] << ")" << endl;
+    }
     do{
        MaxParamDifference = DBL_MIN;
        prevParams = curParams;
