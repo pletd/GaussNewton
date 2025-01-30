@@ -77,9 +77,6 @@ public:
         cout << endl;
     }
 
-    //friend ofstream& operator<< (ofstream& out, const Matrix& outMatr);
-    //friend ifstream& operator>> (ifstream& in, const Matrix& inMatr);
-
     void ReadFromConsole() {
         for (unsigned int i = 0; i < height; i++) {
             for (unsigned int j = 0; j < width; j++) {
@@ -243,72 +240,89 @@ Matrix CalculateJakobiMatrix(const TestTable& testTable, Matrix& curParams, doub
     return res;
 }
 
-double TestF1(double x, Matrix& param) {
-    return x * param.matr[0][0] / (param.matr[1][0] + x);
-}
+double Test1X[] {0.038, 0.194, 0.425, 0.626, 1.253, 2.500, 3.740 };
+double Test1Y[] {0.050, 0.127, 0.094, 0.2122, 0.2729, 0.2665, 0.3317};
+
+double Test2X[]{ 0.038, 0.194, 0.425, 0.626, 1.253, 2.500, 3.740 };
+double Test2Y[]{ 0.050, 0.127, 0.094, 0.2122, 0.2729, 0.2665, 0.3317 };
+
+double Test3X[]{ 0.038, 3.740 };
+double Test3Y[]{ 0.050, 0.3317 };
+
+TestTable tests[] = {
+    {7, Test1X, Test1Y, 2, [](double x, Matrix& params) {return x * params.matr[0][0] / (params.matr[1][0] + x); }},
+    {7, Test2X, Test2Y, 2, [](double x, Matrix& params) {return x * params.matr[0][0] + params.matr[1][0]; }},
+    {2, Test3X, Test3Y, 2, [](double x, Matrix& params) {return x * params.matr[0][0] + params.matr[1][0]; }}
+};
 
 int main()
 {
-    int counter = 0;
-    double* Test1X = new double[7];
-    Test1X[0] = 0.038; Test1X[1] = 0.194; Test1X[2] = 0.425; Test1X[3] = 0.626; Test1X[4] = 1.253; Test1X[5] = 2.500; Test1X[6] = 3.740;
-    double* Test1Y = new double[7]; 
-    Test1Y[0] = 0.050; Test1Y[1] = 0.127; Test1Y[2] = 0.094; Test1Y[3] = 0.2122; Test1Y[4] = 0.2729; Test1Y[5] = 0.2665; Test1Y[6] = 0.3317;
-    TestTable Test1(7, Test1X, Test1Y, 2, TestF1);
+    int counter;
+    const double eps = 0.001;
+    const double h = 0.01;
 
-    double eps = 0.001;
-    double h = 0.01;
-    Matrix curParams(Test1.numberOfParam,1);
-        curParams.matr[0][0] = 0.9;
-        curParams.matr[1][0] = 0.2;
+    Matrix curParams;
     Matrix prevParams;
     Matrix Jak;
     Matrix Delta;
-    Matrix tmp;
-    Matrix errors(1,Test1.numberOfCases);
+    Matrix TransposedJak;
+    Matrix errors;
     double MaxParamDifference;
-    cout << " Start Params " << endl;
-    curParams.Print();
-    cout << " (X, Y) " << endl;
-    for (int i = 0; i < Test1.numberOfCases; i++) {
-        cout << " (" << Test1.x[i] << ", " << Test1.y[i] << ")" << endl;
-    }
-    do{
-       MaxParamDifference = DBL_MIN;
-       prevParams = curParams;
-       Jak = CalculateJakobiMatrix(Test1, curParams, h);
-      // Jak.Print();
-       tmp = Jak.Transpose();
-       //tmp.Print();
-       Delta = tmp * Jak;
-       //Delta.Print();
-       Delta = Delta.FindInverse();
-       //Delta.Print();// Jak.Transpose();
-       Delta = Delta * tmp;
-       //Delta.Print();
-       for (unsigned int i = 0; i < Test1.numberOfCases; i++) {
-           errors.matr[0][i] = Test1.y[i] - Test1.f(Test1.x[i], curParams);
-       }
-       Delta = Delta * errors;
-       //Delta.Print();
-       curParams += Delta.Transpose();
-       cout << " Iter i = " << counter << endl;
-       cout << " Errors " << endl;
-       errors.Print();
-       cout << " Current params " << endl;
-       curParams.Print();
-       for (unsigned int i = 0; i < Test1.numberOfParam; i++) {
-           if (MaxParamDifference < abs(curParams.matr[i][0] - prevParams.matr[i][0])) {
-               MaxParamDifference = abs(curParams.matr[i][0] - prevParams.matr[i][0]);
-           }
-       }
-       counter++;
-    } while (MaxParamDifference > eps && counter < 1000);
-    
-    if (counter < 1000) {
-        cout << " Result " << endl;
-        curParams.PrintFull();
-    }
 
+    int chose;
+    do {
+        cout << " Chose test 0-2  exit - 9" << endl;
+        cin >> chose;
+        if (chose != 9 && chose >= 0 && chose <= 2) {
+            counter = 0;
+            curParams = Matrix(tests[chose].numberOfParam, 1);
+            for (unsigned int i = 0; i < curParams.GetWidth(); i++) {
+                curParams.matr[i][0] = 1;
+            }
+            errors = Matrix(1,tests[chose].numberOfCases);
+            cout << " Start Params " << endl;
+            curParams.Print();
+            cout << " (X, Y) " << endl;
+            for (int i = 0; i < tests[chose].numberOfCases; i++) {
+                cout << " (" << tests[chose].x[i] << ", " << tests[chose].y[i] << ")" << endl;
+            }
+            do {
+                MaxParamDifference = DBL_MIN;
+                prevParams = curParams;
+                Jak = CalculateJakobiMatrix(tests[chose], curParams, h);
+                // Jak.Print();
+                TransposedJak = Jak.Transpose();
+                //tmp.Print();
+                Delta = TransposedJak * Jak;
+                //Delta.Print();
+                Delta = Delta.FindInverse();
+                //Delta.Print();// Jak.Transpose();
+                Delta = Delta * TransposedJak;
+                //Delta.Print();
+                for (unsigned int i = 0; i < tests[chose].numberOfCases; i++) {
+                    errors.matr[0][i] = tests[chose].y[i] - tests[chose].f(tests[chose].x[i], curParams);
+                }
+                Delta = Delta * errors;
+                //Delta.Print();
+                curParams += Delta.Transpose();
+                cout << " Iter i = " << counter << endl;
+                cout << " Errors " << endl;
+                errors.Print();
+                cout << " Current params " << endl;
+                curParams.Print();
+                for (unsigned int i = 0; i < tests[chose].numberOfParam; i++) {
+                    if (MaxParamDifference < abs(curParams.matr[i][0] - prevParams.matr[i][0])) {
+                        MaxParamDifference = abs(curParams.matr[i][0] - prevParams.matr[i][0]);
+                    }
+                }
+                counter++;
+            } while (MaxParamDifference > eps && counter < 1000);
+
+            if (counter < 1000) {
+                cout << " Result " << endl;
+                curParams.PrintFull();
+            }
+        }
+    } while (chose != 9);
     return 0;
 }
